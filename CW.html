@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title> 5CCS2INS - Internet Systems: Coursework </title>
+        <meta charset="utf-8">
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js">
+        </script>
+
+ 
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js">
+        </script>
+        
+        <!-- Functions for creating a URL -->
+        <script>
+            function getNaPTANID() {
+                let ID = "0";
+                if (document.getElementById("station").value == "Paddington"){
+                    ID = "940GZZLUPAC";
+                }
+                else if (document.getElementById("station").value == "King's Cross St Pancras"){
+                    ID = "940GZZLUKSX";
+                }
+                else if (document.getElementById("station").value == "Euston"){
+                    ID = "940GZZLUEUS";
+                }
+                else if (document.getElementById("station").value == "Waterloo"){
+                    ID = "940GZZLUWLO";
+                }
+                else if (document.getElementById("station").value == "London Bridge"){
+                    ID = "940GZZLULNB";
+                }
+                else if (document.getElementById("station").value == "Liverpool Street"){
+                    ID = "940GZZLULVT";
+                }
+                else if (document.getElementById("station").value == ""){
+                    alert ("Please select a station");
+                }
+                return ID;
+            }
+
+            function constructURL () {
+                let ID = getNaPTANID();
+                let day = document.getElementById("day").value;
+                let url = "https://api.tfl.gov.uk/crowding/" + ID + "/" + day ;  // uses string concatenation to form a URL
+                return url;
+            }
+        </script> 
+
+        <!-- Functions for creating arrays and display table -->
+        <script>
+        function createArraylabels(myJSON){
+            let temp = myJSON.timeBands;
+            var labels = [];
+            temp.forEach(element => {   // for each loop to extract time band and push into array
+                labels.push(element.timeBand);
+            });
+            return labels;
+        }
+
+        function createArraycrowding(myJSON){
+            let temp = myJSON.timeBands;
+            var crowding = []
+            temp.forEach(element => { // for each loop to extract time band and push into array
+                crowding.push(Math.round((element.percentageOfBaseLine)*100));
+            });
+            return crowding;
+        }
+    
+        function setHeader(){
+            $("#datatable").append ("<tr> <td id = 'timeBandTable'></td> <br><td id = 'crowdingTable'></td> <br></tr>"); // append a row with 2 columns 
+            // setting the headers of the table
+            document.getElementById("timeBandTable").innerHTML = "Time Band"; 
+            document.getElementById("crowdingTable").innerHTML = "Crowding Percentage";
+        }
+
+        function createTable (array1, array2) {
+            for (let i = 0; i < array1.length; i++){
+                let time = array1 [i]; //labels
+                let percentage = array2 [i]; //crowding
+                // append a row with 2 columns, inserting the data into the columns
+                $("#datatable").append ("<tr><td>"+ time + "</td><br><td>"+ percentage + "</td><br></tr>"); 
+            }
+        }
+        </script>            
+
+        <!-- Bar chart construction -->
+        <script>  
+        // Creating an empty chart object
+        const ctx = document.getElementById('myChart');
+
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                label: '',
+                data: [],
+                borderWidth: 0,
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        function constructBarChart(array1, array2){  
+            // setting the format of the bar chart
+            let data1 = {
+                labels: array1,
+                datasets: [{
+                        label: 'Crowding',
+                        data: array2, //y axis
+                        borderWidth: 1
+                }]    
+            };        
+            let config = {
+                type: 'bar',     
+                data: data1,
+                options: {
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 100,
+                        }
+                    }
+                }
+            };
+            myChart.destroy(); // destroy chart to create a new one
+            myChart = new Chart(
+                document.getElementById('myChart'),
+                config  
+            );
+        }
+        </script>
+
+        <script>
+            function loadJSON(){
+                const xhttp = new XMLHttpRequest();
+                xhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        let myJson = JSON.parse(this.responseText);
+
+                        // displaying peak hours
+                        document.getElementById("AM").innerHTML = "AM Peak: " + myJson.amPeakTimeBand;
+                        document.getElementById("PM").innerHTML = "PM Peak: " + myJson.pmPeakTimeBand;
+                        
+                        // creating 2 arrays
+                        labels = createArraylabels(myJson);
+                        crowding = createArraycrowding(myJson);
+                        $('#datatable').empty(); // clearing rows and columns of table
+                        setHeader(); //creating the header for the empty tables
+                        createTable(labels, crowding); // tabulating table with data
+
+                        constructBarChart(labels, crowding); // constructing bar chart
+                    }
+                };
+                xhttp.open('GET', constructURL(), true);
+                xhttp.setRequestHeader('app_key', 'bd7a372f588142da88c62ef948d39dd7');
+                xhttp.send();
+            } 
+            </script>
+
+        </head>
+        
+        <body>
+            <div>
+                <div>  
+                    <h1> Welcome !! Here, you can find the situation in any of the tube stations of your choice. Search up, before starting your journey. </h1>
+                    <h3> Crowding At London Underground Stations By Weekday</h3>
+                </div>
+                <hr>
+                
+                <!-- Dropdown for the tube stations -->   
+                <label for = "station" style= "font-size:larger"> Tube Station: </label> 
+                <select name = "station" style="width: 150px; font-size: larger; width:fit-content ;" id="station" >
+                <option value= "Paddington" > Paddington </option>
+                <option value= "King&apos;s Cross St Pancras" > King&apos;s Cross St Pancras </option>
+                <option value= "Euston" > Euston </option>
+                <option value= "Waterloo" > Waterloo </option>
+                <option value= "London Bridge" > London Bridge </option>
+                <option value= "Liverpool Street" > Liverpool Street </option>
+                </select><br>
+    
+                <!-- Dropdown for day of week -->
+                <label for = "day" style= "font-size:larger"> Day of Week: </label> 
+                <select name= "day" style= "width: 150px; font-size: larger;" id="day">
+                <option value="mon"> Monday </option>
+                <option value="tue"> Tuesday </option>
+                <option value="wed"> Wednesday </option>
+                <option value="thu"> Thursday </option> 
+                <option value="fri"> Friday </option>  
+                </select> 
+                    
+                <!-- Button which loads the data -->
+                <button onclick= "loadJSON()" style="font-size:small"> View Crowding Info 
+                </button> <br><br>
+                    
+                   
+                <h2> Table of Crowding </h2>
+    
+                <!-- Where the chart will be displayed -->
+                <div>
+                    <canvas id = "myChart"></canvas><br>
+                </div>
+    
+                <!-- Where peak hours of the day will be displayed -->
+                <label for = "AMPeak" style = "font-size: larger;" id="AM"></label><br>
+                <label for = "PMPeak" style = "font-size: larger;" id="PM"></label><br><br>
+                
+                <!-- Where table will be displayed -->
+                <table id = "datatable" style="padding:0in ;text-align:center"> 
+                </table>
+            </div>
+    </body>
+</html>
